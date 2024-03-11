@@ -1,8 +1,38 @@
-import { Text, View } from 'react-native'
-import Ingredients from "../components/ingredients"
+import { Ingredient } from "@/components/Ingredient"
+import { Selected } from "@/components/Selected"
+import { services } from "@/services"
+import { router } from "expo-router"
+import { useEffect, useState } from "react"
+import { Alert, ScrollView, Text, View } from 'react-native'
 import { styles } from "./styles"
 
 export default function Index() {
+  const [selected, setSelected] = useState<string[]>([])
+  const [ingredients, setIngredients] = useState<IngredientResponse[]>([])
+
+  const handleToggleSelected = (value: string) => {
+    if (selected.includes(value)) {
+      return setSelected((state) => state.filter((item) => item !== value))
+    }
+
+    setSelected((state) => [...state, value])
+  }
+
+  const handleClearSelected = () => {
+    Alert.alert("Limpar", "Deseja limpar tudo?", [
+      { text: "Não", style: 'cancel' },
+      { text: "Sim", onPress: () => setSelected([]) }
+    ])
+  }
+
+  const handleSearch = () => {
+    router.navigate('/recipes/' + selected)
+  }
+
+  useEffect(() => {
+    services.ingredients.findAll().then(setIngredients)
+  }, [])
+
   return (
     <View style={
       styles.container
@@ -18,7 +48,30 @@ export default function Index() {
         Descubra receitas baseadas nos produtos que você escolheu.
       </Text>
 
-      <Ingredients />
+      <ScrollView
+        contentContainerStyle={styles.ingredients}
+        showsVerticalScrollIndicator={false}
+      >
+        {ingredients.map((ingredient) => (
+          <Ingredient
+            key={ingredient.id}
+            name={ingredient.name}
+            image={`${services.storage.imagePath}/${ingredient.image}`}
+            onPress={() => handleToggleSelected(ingredient.id)}
+            selected={selected.includes(ingredient.id)}
+          />
+        ))}
+      </ScrollView>
+
+      {
+        selected.length > 0 && (
+          <Selected
+            quantity={selected.length}
+            onClear={handleClearSelected}
+            onSearch={handleSearch}
+          />
+        )}
+
     </View>
   )
 }
